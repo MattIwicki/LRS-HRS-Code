@@ -1,4 +1,4 @@
-source("scripts/lrs_hrs_source.R")
+source("scripts/source.R")
 
 # choose the image to be processed
 # Choose_image is a data frame containing values needed for this script:
