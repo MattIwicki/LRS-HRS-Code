@@ -1,6 +1,3 @@
-#install.packages(c("terra", "sf", "rgeoda", "supercells", "regional",
-#                   "segmetric", "pracma", "ggplot2", "farver", "modEvA", "osmdata"))
-
 library(pracma)
 library(sf)
 library(rgeoda)
@@ -13,6 +10,22 @@ library(ggplot2)
 library(osmdata)
 library(segmetric)
 
+# image choice data frame - created in order to simplify this repository.
+# Thanks to it the image can be chosen inside a script and there is no
+# need for many separate scripts for different images,
+# which was previously the case.
+choose_image = data.frame(
+  file = c("orto_170519.tif", "orto_180407.tif",
+           "orto_190831.tif", "orto_200328.tif",
+           "orto_200406.tif", "orto_211001.tif"), 
+  smooth_threshold = c(40, 60, 50, 45, 50, 55), 
+  lrs_segments = c(24, 27, 10, 12, 7, 13), 
+  hrs_segments = c(54, 78, 87, 51, 76, 64),
+  smst_segments = c(53, 44, 49, 42, 67, 64))
+
+row.names(choose_image) = c("2017-05-19", "2018-04-07",
+                            "2019-08-31", "2020-03-28",
+                            "2020-04-06", "2021-10-01")
 
 vect_lab2rgb = function(slic){
   slic_df = st_drop_geometry(slic[,c("L","A","B")])
@@ -104,16 +117,6 @@ calculate_lv_roclv = function(superpixels, w, algo_fun = redcap, max_clusters = 
   return(smst[-70,])
 }
 
-get_peaks_old = function(smst, smooth_threshold, diff_threshold){
-  
-  spikes = findpeaks(smst[, "roclv"])
-  #spikes = c(0, 0, diff(diff(smst[, "roclv"])))
-  #spikes[1:smooth_threshold] = 1
-  #spikes[spikes < diff_threshold] = 1
-  #spikes[smooth_threshold] = 0
-  return(spikes)
-}
-
 get_peaks = function(smst, smooth_threshold, below_threshold = 3, above_threshold = 1.2){
   smst1 = smst[1:(smooth_threshold - 1),"roclv"]
   smst2 = smst[smooth_threshold:length(smst[, "roclv"]),"roclv"]
@@ -140,12 +143,12 @@ plot_roclv = function(smst, spikes){
     geom_vline(xintercept = min(which(spikes > 1)), col = "green") + geom_vline(xintercept = which(spikes == 0), col = "red")
 }
 
-peaks_mean_inh = function(spikes, superpixels, raster, w, sample_size){
+peaks_mean_inh_isol = function(spikes, superpixels, raster, w, sample_size){
   indexes = spikes
   result = data.frame(index = indexes, mean_inh = 1:length(indexes), mean_isol = 1:length(indexes))
   
   for(i in 1:length(indexes)){
-    print(i)
+    print(paste0(i, "/", length(spikes)))
     superpixels1 = cluster_superpixels(superpixels, k = i, w = w)
     superpixels1$inh = reg_inhomogeneity(superpixels1, raster, sample_size = sample_size)
     superpixels1$isol = reg_isolation(superpixels1, raster, sample_size = sample_size)
@@ -155,20 +158,20 @@ peaks_mean_inh = function(spikes, superpixels, raster, w, sample_size){
   return(result)
 }
 
-peaks_mean_inh2 = function(spikes, superpixels, raster, w, sample_size){
-  indexes = which(spikes > 1)
-  result = data.frame(index = indexes, mean_inh = 1:length(indexes), mean_isol = 1:length(indexes))
+# calculating the AFI metric
+
+calculate_afi_lrs_hrs = function(lrs, hrs, ref){
+  metric_obj_lrs = sm_read(ref_sf = ref, seg_sf = lrs)
+  metric_obj_hrs = sm_read(ref_sf = ref, seg_sf = hrs)
   
-  for(i in 1:length(indexes)){
-    print(i)
-    superpixels1 = cluster_superpixels(superpixels, k = i, w = w)
-    superpixels1$inh = reg_inhomogeneity(superpixels1, raster, sample_size = sample_size)
-    superpixels1$isol = reg_isolation(superpixels1, raster, sample_size = sample_size)
-    result[i,"mean_inh"] = mean(superpixels1$inh)
-    result[i, "mean_isol"] = mean(superpixels1$isol)
-  }
-  return(result)
+  lrs_afi = sm_compute(metric_obj_lrs, "AFI") %>% summary()
+  hrs_afi = sm_compute(metric_obj_hrs, "AFI") %>% summary()
+  
+  afi = c(lrs_afi, hrs_afi)
+  names(afi) = c("LRS AFI", "HRS AFI")
+  return(afi)
 }
+
 
 # functions not used in this project
 
@@ -201,4 +204,14 @@ draw_rect_on_raster = function(xmin, ymin, xmax, ymax, raster, color = "red", wi
        bbox[1] + (difference_x * xmax),
        bbox[2] + (difference_y * ymax),
        border = color, lwd = width)
+}
+
+get_peaks_old = function(smst, smooth_threshold, diff_threshold){
+  
+  spikes = findpeaks(smst[, "roclv"])
+  spikes = c(0, 0, diff(diff(smst[, "roclv"])))
+  spikes[1:smooth_threshold] = 1
+  spikes[spikes < diff_threshold] = 1
+  spikes[smooth_threshold] = 0
+  return(spikes)
 }
