@@ -10,7 +10,7 @@ All scripts can be found in the scripts folder:
 - *lrs_hrs.R* - script with the implementation of my method
 - *smst.R* - script with the implementation of the [SMST method](https://ieeexplore.ieee.org/abstract/document/8038855)
 
-In both *lrs_hrs.R* and *smst.R* the image to process needs to be chosen.
+In both *lrs_hrs.R* and *smst.R* the image to be processed needs to be chosen.
 All values needed for both approaches are stored in the *choose_image* variable.
 
 Choosing the image is done by supplying the image date or image number for row extraction from the choose_image variable:
@@ -27,7 +27,7 @@ current_image = choose_image[image_number,]
 As an example:
 ```R
 
-current_image = choose_image[""2017-05-19"",]
+current_image = choose_image["2017-05-19",]
 
 #or 
 
