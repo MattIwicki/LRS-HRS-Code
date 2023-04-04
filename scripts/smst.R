@@ -40,8 +40,8 @@ ggplot(lv_roclv, aes(x = seg_num, y = roclv)) + geom_line() +
 
 # SMST result
 smst = cluster_superpixels(slic[, c("r", "g", "b")], 53, w)
-plot(raster)
-plot(clustered$geometry, add = T, lwd = 1, border = "red")
+plotRGB(raster)
+plot(smst$geometry, add = T, lwd = 1, border = "red")
 
 # AFI metric
 ref = read_sf("data/osm_reference.gpkg")
